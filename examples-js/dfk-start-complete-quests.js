@@ -97,7 +97,7 @@ walletHelper.getOrCreateWallet(config.wallet.walletPath, provider).then(async wa
         // You will likely want to adjust this for your circumstances. 
         if (miningHeroes.length >= 3) {
             if (!questingStats["miningLocked"]) {
-                await questCore.startQuest(miningHeroes.slice(0, 3), dfkAddresses.questAddresses.miningJewel, 1);
+                await questCore.startQuest(miningHeroes.slice(0, 3), dfkAddresses.questAddresses.miningLocked, 1);
             } else if (!questingStats["miningGold"] && miningHeroes.length >= 6) {
                 await questCore.startQuest(miningHeroes.slice(0, 6), dfkAddresses.questAddresses.miningGold, 1);
             }
