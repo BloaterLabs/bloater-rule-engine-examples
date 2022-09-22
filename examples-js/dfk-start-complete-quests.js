@@ -96,9 +96,9 @@ walletHelper.getOrCreateWallet(config.wallet.walletPath, provider).then(async wa
         // Note: This is grouping up mining heroes so that it will only queue up 3 for the Crystal mine or 6 for gold. 
         // You will likely want to adjust this for your circumstances. 
         if (miningHeroes.length >= 3) {
-            if (!questingStats[dfkAddresses.questAddresses.miningJewel]) {
+            if (!questingStats["miningLocked"]) {
                 await questCore.startQuest(miningHeroes.slice(0, 3), dfkAddresses.questAddresses.miningJewel, 1);
-            } else if (!questingStats[dfkAddresses.questAddresses.miningGold] && miningHeroes.length >= 6) {
+            } else if (!questingStats["miningGold"] && miningHeroes.length >= 6) {
                 await questCore.startQuest(miningHeroes.slice(0, 6), dfkAddresses.questAddresses.miningGold, 1);
             }
         }
@@ -110,16 +110,16 @@ walletHelper.getOrCreateWallet(config.wallet.walletPath, provider).then(async wa
         // Note: This is running gardens in my order preference. Depending on if you have anything in the LPs you might want
         // to adjust this order and add/remove addresses.
         if (gardeningHeroes.length >= 2) {
-            if (!questingStats[dfkAddresses.questAddresses.gardeningCrystalEth]) {
+            if (!questingStats["gardeningCrystalEth"]) {
                 await questCore.startQuest(gardeningHeroes.slice(0, 2), dfkAddresses.questAddresses.gardeningCrystalEth, 1);
-            } else if (!questingStats[dfkAddresses.questAddresses.gardeningJewelBtc]) {
+            } else if (!questingStats["gardeningJewelBtc"]) {
                 await questCore.startQuest(gardeningHeroes.slice(0, 2), dfkAddresses.questAddresses.gardeningJewelBtc, 1);
-            } else if (!questingStats[dfkAddresses.questAddresses.gardeningCrystalAvax]) {
+            } else if (!questingStats["gardeningCrystalAvax"]) {
                 await questCore.startQuest(gardeningHeroes.slice(0, 2), dfkAddresses.questAddresses.gardeningCrystalAvax, 1);
-            } else if (!questingStats[dfkAddresses.questAddresses.gardeningCrystalJewel]) {
+            } else if (!questingStats["gardeningCrystalJewel"]) {
                 await questCore.startQuest(gardeningHeroes.slice(0, 2), dfkAddresses.questAddresses.gardeningCrystalJewel, 1);
-            } else if (!questingStats[dfkAddresses.questAddresses.gardeningCrystalUSDC]) {
-                await questCore.startQuest(gardeningHeroes.slice(0, 2), dfkAddresses.questAddresses.gardeningCrystalUSDC, 1);
+            } else if (!questingStats["gardeningCrystalUsdc"]) {
+                await questCore.startQuest(gardeningHeroes.slice(0, 2), dfkAddresses.questAddresses.gardeningCrystalUsdc, 1);
             }
         }
     }
