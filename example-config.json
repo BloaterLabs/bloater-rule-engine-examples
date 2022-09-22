@@ -1,0 +1,10 @@
+{
+    "gasPrice": "not implemented",
+    "network": "not implemented",
+    "wallet": {
+        "walletPath": "wallet.json",
+        "address": "0x0011YOURADDRESS1100",
+        "rpc": "https://subnets.avax.network/defi-kingdoms/dfk-chain/rpc",
+        "chainId": 53935
+    }
+}
