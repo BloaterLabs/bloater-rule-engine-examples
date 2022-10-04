@@ -24,13 +24,13 @@ walletHelper.getOrCreateWallet(config.wallet.walletPath, provider).then(async wa
     questingStats = {};
     for (const activeQuest of activeQuests) {
         if (activeQuest.isComplete) {
-            console.log(`completing ${activeQuest.quest} quest for ${activeQuest.heroes} on ${activeQuest.completeAt}`);
+            console.log(`completing ${activeQuest.name} quest for ${activeQuest.heroes} on ${activeQuest.completeAt}`);
             await questCore.completeQuest(activeQuest.heroes[0], wallet);
 
             continue;
         }
 
-        questingStats[activeQuest.quest] = ((questingStats[activeQuest.quest]) ? questingStats[activeQuest.quest]: 0) + 1;
+        questingStats[activeQuest.name] = ((questingStats[activeQuest.name]) ? questingStats[activeQuest.name]: 0) + 1;
     }
 
     console.log('Active Quest Counts', questingStats);
