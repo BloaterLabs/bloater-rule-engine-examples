@@ -32,7 +32,7 @@ const walletHelper = new WalletHelper();
 // This method has an optional parameter to pass the password through code if you don't want to manually enter everytime you
 // start this. Just be aware of risks that having a password somewhere brings.
 walletHelper
-  .getOrCreateWallet(config.wallet.walletPath)
+  .getOrCreateWallet(config.wallet.walletPath, provider)
   .then(async (wallet) => {
     const dfkAddresses = new DFKChainAddresses();
     const questAddresses = dfkAddresses.questAddresses;
