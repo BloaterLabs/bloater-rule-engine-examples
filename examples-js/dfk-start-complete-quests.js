@@ -11,6 +11,18 @@ const {
 // the config file you want to use. You will need to update this for at least your address.
 const config = require("./../config.json");
 
+// The minimum value of a heroes stat where they would go on training quest. This takes into account statboosts.
+const minimumStatValueForTrainingQuests = 25;
+
+// The minimum amount of stamina to quest.
+const minimumStaminaToQuest = 25;
+
+// The amount of heroes required before you start mining locked tokens. This takes priority over mining gold.
+const heroesRequiredToMineLocked = 3;
+
+// The amount of heroes required before you start mining gold.
+const heroesRequiredToMineGold = 6;
+
 const provider = new ethers.providers.JsonRpcProvider(config.wallet.rpc);
 const walletHelper = new WalletHelper();
 
@@ -20,9 +32,10 @@ const walletHelper = new WalletHelper();
 // This method has an optional parameter to pass the password through code if you don't want to manually enter everytime you
 // start this. Just be aware of risks that having a password somewhere brings.
 walletHelper
-  .getOrCreateWallet(config.wallet.walletPath, provider)
+  .getOrCreateWallet(config.wallet.walletPath)
   .then(async (wallet) => {
     const dfkAddresses = new DFKChainAddresses();
+    const questAddresses = dfkAddresses.questAddresses;
     const contractProvider = new ContractProvider(dfkAddresses.contractAddresses, provider);
     const heroCore = new HeroCore(dfkAddresses, contractProvider.getHeroCoreContract());
     const questCore = new QuestCore(dfkAddresses, contractProvider.getQuestCoreContract(), wallet);
@@ -47,93 +60,90 @@ walletHelper
 
     // Get Heroes.
     const heroes = await heroCore.getHeroes(wallet.address);
-    const fishingHeroes = [];
-    const foragingHeroes = [];
-    const gardeningHeroes = [];
-    const miningHeroes = [];
+
+    const questBuckets = {};
     const questingHeroes = [];
 
-    // Loop through heroes that have 25 or more stamina
-    for (const hero of heroes.filter((h) => h.currentStamina >= 25)) {
+    // Loop through heroes that have current stamina greater then minimum stamina to quest we set above
+    for (const hero of heroes.filter((h) => h.currentStamina >= minimumStaminaToQuest)) {
       // If the quest address is not none then that means they are currently questing and we don't need to start quests for them.
-      if (hero.questAddress !== dfkAddresses.questAddresses.none) {
+      if (hero.questAddress !== questAddresses.none) {
         // put them in their own bucket so we can log them later
         questingHeroes.push(hero.id);
         continue;
       }
 
       // Check if we want do any training quests
-
-      // This script currently only deals with basic professions so put heroes in buckets for profession quests.
-      switch (hero.profession) {
-        case Profession.fishing:
-          fishingHeroes.push(hero.id);
-          break;
-
-        case Profession.foraging:
-          foragingHeroes.push(hero.id);
-          break;
-
-        case Profession.gardening:
-          gardeningHeroes.push(hero.id);
-          break;
-
-        case Profession.mining:
-          miningHeroes.push(hero.id);
-          break;
-
-        default:
-          console.log(`unknown profession HeroId: ${hero.id} profession: ${hero.profession}`);
-          break;
-      }
-    }
-
-    // Now start any profession quests where there are heroes. I separated so that we could group up
-    // multiple heroes in one run if needed.
-
-    // todo: only starting one quest per group with each run. Change so it queues them up together in single run.
-    if (fishingHeroes.length > 0) {
-      console.log(`${fishingHeroes.length} heroes ready to fish`);
-      await questCore.startQuest(fishingHeroes.slice(0, 6), dfkAddresses.questAddresses.fishing);
-    }
-
-    if (foragingHeroes.length > 0) {
-      console.log(`${foragingHeroes.length} heroes ready to forage`);
-      await questCore.startQuest(foragingHeroes.slice(0, 6), dfkAddresses.questAddresses.foraging);
-    }
-
-    if (miningHeroes.length > 0) {
-      console.log(`${miningHeroes.length} heroes ready to mine`);
-
-      // Note: This is grouping up mining heroes so that it will only queue up 3 for the Crystal mine or 6 for gold.
-      // You will likely want to adjust this for your circumstances.
-      if (miningHeroes.length >= 3) {
-        if (!questingStats["miningLocked"]) {
-          await questCore.startQuest(miningHeroes.slice(0, 3), dfkAddresses.questAddresses.miningLocked, 1);
-        } else if (!questingStats["miningGold"] && miningHeroes.length >= 6) {
-          await questCore.startQuest(miningHeroes.slice(0, 6), dfkAddresses.questAddresses.miningGold, 1);
+      if (hero.bestTrainingStatValue >= minimumStatValueForTrainingQuests) {
+        if (questBuckets[hero.bestTrainingStat] == null) {
+          questBuckets[hero.bestTrainingStat] = [];
         }
+
+        questBuckets[hero.bestTrainingStat].push(hero.id);
+        continue;
       }
+
+      // Put the remainder in their default profession quests
+      // Get profession name from Profession.
+      const profession = Object.entries(Profession).find((p) => p[1] === hero.profession)[0];
+
+      // if we haven't created a bucket for this profession do it now.
+      if (questBuckets[profession] == null) {
+        questBuckets[profession] = [];
+      }
+
+      questBuckets[profession].push(hero.id);
     }
 
-    if (gardeningHeroes.length > 0) {
-      console.log(`${gardeningHeroes.length} heroes ready to garden`);
+    // Start quests where there are heroes. I separated so that we could group up multiple heroes in one run if needed.
+    for (const quest in questBuckets) {
+      let questLevel = 1; // 0 for profession, 1 for training.
+      let heroesToQuest = questBuckets[quest].slice(0, 6);
+      let questAddress = questAddresses[quest];
+      let questAttempts = Math.floor(minimumStaminaToQuest / 5);
 
-      // Note: This is running gardens in my order preference. Depending on if you have anything in the LPs you might want
-      // to adjust this order and add/remove addresses.
-      if (gardeningHeroes.length >= 2) {
-        if (!questingStats["gardeningCrystalEth"]) {
-          await questCore.startQuest(gardeningHeroes.slice(0, 2), dfkAddresses.questAddresses.gardeningCrystalEth, 1);
-        } else if (!questingStats["gardeningJewelBtc"]) {
-          await questCore.startQuest(gardeningHeroes.slice(0, 2), dfkAddresses.questAddresses.gardeningJewelBtc, 1);
-        } else if (!questingStats["gardeningCrystalAvax"]) {
-          await questCore.startQuest(gardeningHeroes.slice(0, 2), dfkAddresses.questAddresses.gardeningCrystalAvax, 1);
-        } else if (!questingStats["gardeningCrystalJewel"]) {
-          await questCore.startQuest(gardeningHeroes.slice(0, 2), dfkAddresses.questAddresses.gardeningCrystalJewel, 1);
-        } else if (!questingStats["gardeningCrystalUsdc"]) {
-          await questCore.startQuest(gardeningHeroes.slice(0, 2), dfkAddresses.questAddresses.gardeningCrystalUsdc, 1);
-        }
+      console.log(`${heroesToQuest.length} heroes ready for ${quest} quest`);
+      switch (quest) {
+        case "mining":
+          if (!questingStats["miningLocked"] && heroesToQuest.length >= heroesRequiredToMineLocked) {
+            heroesToQuest = heroesToQuest.slice(0, heroesRequiredToMineLocked);
+            questAddress = questAddresses.miningLocked;
+          } else if (!questingStats["miningGold"] && heroesToQuest.length >= heroesRequiredToMineGold) {
+            heroesToQuest = heroesToQuest.slice(0, heroesRequiredToMineGold);
+            questAddress = questAddresses.miningGold;
+          } else {
+            // don't want to do any mining for now. Let's continue
+            continue;
+          }
+          questLevel = 0;
+          questAttempts = 1;
+          break;
+
+        case "gardening":
+          // Note: This is running gardens in my order preference. Depending on if you have anything in the LPs you might want
+          // to adjust this order and add/remove addresses.
+          if (heroesToQuest.length < 2) {
+            continue;
+          }
+
+          questLevel = 0;
+          questAttempts = 1;
+          heroesToQuest = heroesToQuest.slice(0, 2);
+          if (!questingStats["gardeningCrystalEth"]) {
+            questAddress = questAddresses.gardeningCrystalEth;
+          } else if (!questingStats["gardeningJewelBtc"]) {
+            questAddress = questAddresses.gardeningJewelBtc;
+          }
+          break;
+
+        case "foraging":
+        case "fishing":
+          questLevel = 0;
+          break;
       }
+
+      // Start the quest.
+      await questCore.startQuest(heroesToQuest, questAddress, questAttempts, questLevel);
     }
 
     console.log(`${questingHeroes.length} currently questing heroes`);
