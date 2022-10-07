@@ -47,7 +47,9 @@ walletHelper
     questingStats = {};
     for (const activeQuest of activeQuests) {
       if (activeQuest.isCompletable) {
-        console.log(`completing ${activeQuest.name} quest for ${activeQuest.heroes} on ${activeQuest.completeAt}`);
+        console.log(
+          `completing ${activeQuest.name} quest for ${activeQuest.heroes} on ${activeQuest.completeAt.toLocaleString()}`
+        );
         await questCore.completeQuest(activeQuest.heroes[0], wallet);
 
         continue;
@@ -133,6 +135,9 @@ walletHelper
             questAddress = questAddresses.gardeningCrystalEth;
           } else if (!questingStats["gardeningJewelBtc"]) {
             questAddress = questAddresses.gardeningJewelBtc;
+          } else {
+            // don't do any gardening for now.
+            continue;
           }
           break;
 
